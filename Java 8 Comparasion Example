@@ -1,0 +1,343 @@
+1. Overview
+
+In this tutorial we’re going to take a first look at the upcoming Lambda support in JDK 8 – specifically at how to leverage it to write the Comparator and sort a Collection.
+
+This article is part of the “Java – Back to Basic” series here on Baeldung.
+
+First, let’s define the a simple entity class:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+public class Human {
+    private String name;
+    private int age;
+ 
+    public Human() {
+        super();
+    }
+ 
+    public Human(String name, int age) {
+        super();
+ 
+        this.name = name;
+        this.age = age;
+    }
+ 
+    // standard getters and setters
+}
+2. Basic Sort without Lambdas
+
+Before Java 8, sorting a collection would involve creating an anonymous inner class for the Comparator used in the sort:
+
+1
+2
+3
+4
+5
+6
+new Comparator<Human>() {
+    @Override
+    public int compare(Human h1, Human h2) {
+        return h1.getName().compareTo(h2.getName());
+    }
+}
+This would simply be used to sort the List of Human entities:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+@Test
+public void givenPreLambda_whenSortingEntitiesByName_thenCorrectlySorted() {
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    Collections.sort(humans, new Comparator<Human>() {
+        @Override
+        public int compare(Human h1, Human h2) {
+            return h1.getName().compareTo(h2.getName());
+        }
+    });
+    Assert.assertThat(humans.get(0), equalTo(new Human("Jack", 12)));
+}
+3. Basic Sort with Lambda Support
+
+With the introduction of Lambdas, we can now bypass the anonymous inner class and go achieve the same result with simple, functional semantics:
+
+1
+(final Human h1, final Human h2) -> h1.getName().compareTo(h2.getName());
+Similarly – we can now test the behavior just as before:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+@Test
+public void whenSortingEntitiesByName_thenCorrectlySorted() {
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    humans.sort((Human h1, Human h2) -> h1.getName().compareTo(h2.getName()));
+    Assert.assertThat(humans.get(0), equalTo(new Human("Jack", 12)));
+}
+Notice that we’re also using the new sort API added to java.util.List in Java 8 – instead of the old Collections.sort API.
+
+4. Basic Sorting with no Type Definitions
+
+We can further simplify the expression by not specifying the type definitions – the compiler is capable of inferring these on its own:
+
+1
+(h1, h2) -> h1.getName().compareTo(h2.getName())
+And again, the test remains very similar:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+@Test
+public void
+  givenLambdaShortForm_whenSortingEntitiesByName_thenCorrectlySorted() {
+     
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    humans.sort((h1, h2) -> h1.getName().compareTo(h2.getName()));
+    Assert.assertThat(humans.get(0), equalTo(new Human("Jack", 12)));
+}
+5. Sort using Reference to Static Method
+
+Next, we’re going to perform the sort using a Lambda Expression with a reference to a static method.
+
+First, we’re going to define the method compareByNameThenAge – with the exact same signature as the compare method in a Comparator<Human> object:
+
+1
+2
+3
+4
+5
+6
+7
+public static int compareByNameThenAge(Human lhs, Human rhs) {
+    if (lhs.name.equals(rhs.name)) {
+        return lhs.age - rhs.age;
+    } else {
+        return lhs.name.compareTo(rhs.name);
+    }
+}
+Now, we’re going to call the humans.sort method with this reference:
+
+1
+humans.sort(Human::compareByNameThenAge);
+The end result is a working sorting of the collection using the static method as a Comparator:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+@Test
+public void
+  givenMethodDefinition_whenSortingEntitiesByNameThenAge_thenCorrectlySorted() {
+     
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    humans.sort(Human::compareByNameThenAge);
+    Assert.assertThat(humans.get(0), equalTo(new Human("Jack", 12)));
+}
+6. Sort Extracted Comparators
+
+We can also avoid defining even the comparison logic itself by using an instance method reference and the Comparator.comparing method – which extracts and creates a Comparable based on that function.
+
+We’re going to use the getter getName() to build the Lambda expression and sort the list by name:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+@Test
+public void
+  givenInstanceMethod_whenSortingEntitiesByNameThenAge_thenCorrectlySorted() {
+     
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    Collections.sort(humans, Comparator.comparing(Human::getName));
+    Assert.assertThat(humans.get(0), equalTo(new Human("Jack", 12)));
+}
+7. Reverse Sort
+
+JDK 8 has also introduced a helper method for reversing the comparator – we can make quick use of that to reverse our sort:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+@Test
+public void whenSortingEntitiesByNameReversed_thenCorrectlySorted() {
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 10), 
+      new Human("Jack", 12)
+    );
+     
+    Comparator<Human> comparator = 
+      (h1, h2) -> h1.getName().compareTo(h2.getName());
+     
+    humans.sort(comparator.reversed());
+    Assert.assertThat(humans.get(0), equalTo(new Human("Sarah", 10)));
+}
+8. Sort with Multiple Conditions
+
+The comparison lambda expressions need not be this simple – we can write more complex expressions as well – for example sorting the entities first by name, and then by age:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+@Test
+public void whenSortingEntitiesByNameThenAge_thenCorrectlySorted() {
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 12), 
+      new Human("Sarah", 10), 
+      new Human("Zack", 12)
+    );
+     
+    humans.sort((lhs, rhs) -> {
+        if (lhs.getName().equals(rhs.getName())) {
+            return lhs.getAge() - rhs.getAge();
+        } else {
+            return lhs.getName().compareTo(rhs.getName());
+        }
+    });
+    Assert.assertThat(humans.get(0), equalTo(new Human("Sarah", 10)));
+}
+9. Sort with Multiple Conditions – Composition
+
+The same comparison logic – first sorting by name and then, secondarily, by age – can also be implemented by the new composition support for Comparator.
+
+Starting with JDK 8, we can now chain together multiple comparators to build more complex comparison logic:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+@Test
+public void
+  givenComposition_whenSortingEntitiesByNameThenAge_thenCorrectlySorted() {
+     
+    List<Human> humans = Lists.newArrayList(
+      new Human("Sarah", 12), 
+      new Human("Sarah", 10), 
+      new Human("Zack", 12)
+    );
+ 
+    humans.sort(
+      Comparator.comparing(Human::getName).thenComparing(Human::getAge)
+    );
+     
+    Assert.assertThat(humans.get(0), equalTo(new Human("Sarah", 10)));
+}
+10. Conclusion
+
+This articles illustrated the various and exciting ways that a List can be sorted using Java 8 Lambda Expressions – moving right past syntactic sugar and into real and powerful functional semantics.
+
+The implementation of all these examples and code snippets can be found in my github project – this is an Eclipse based project, so it should be easy to import and run as it is.
